@@ -14,6 +14,78 @@ export type Database = {
   }
   public: {
     Tables: {
+      button_states: {
+        Row: {
+          button_number: number
+          device_id: string
+          id: string
+          state: boolean
+          timestamp: string
+        }
+        Insert: {
+          button_number: number
+          device_id?: string
+          id?: string
+          state?: boolean
+          timestamp?: string
+        }
+        Update: {
+          button_number?: number
+          device_id?: string
+          id?: string
+          state?: boolean
+          timestamp?: string
+        }
+        Relationships: []
+      }
+      lcd_messages: {
+        Row: {
+          device_id: string
+          id: string
+          line: number
+          message: string
+          timestamp: string
+        }
+        Insert: {
+          device_id?: string
+          id?: string
+          line: number
+          message: string
+          timestamp?: string
+        }
+        Update: {
+          device_id?: string
+          id?: string
+          line?: number
+          message?: string
+          timestamp?: string
+        }
+        Relationships: []
+      }
+      led_states: {
+        Row: {
+          device_id: string
+          id: string
+          led_number: number
+          state: boolean
+          updated_at: string
+        }
+        Insert: {
+          device_id?: string
+          id?: string
+          led_number: number
+          state?: boolean
+          updated_at?: string
+        }
+        Update: {
+          device_id?: string
+          id?: string
+          led_number?: number
+          state?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
       sensor_readings: {
         Row: {
           created_at: string
@@ -43,7 +115,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      initialize_leds: {
+        Args: { p_device_id?: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
