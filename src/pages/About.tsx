@@ -39,7 +39,7 @@ const About = () => {
           <Users className="w-12 h-12 text-primary mx-auto" />
           <h1 className="text-4xl font-bold text-foreground">Acerca del Proyecto</h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Sistema IoT para Control y Monitoreo con ESP32
+            Sistema de Control y Monitoreo con ESP32
           </p>
         </div>
 

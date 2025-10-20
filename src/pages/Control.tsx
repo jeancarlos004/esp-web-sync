@@ -32,7 +32,7 @@ const Control = () => {
       <div className="container mx-auto p-6 space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-4xl font-bold text-foreground">
-            Panel de Control IoT
+            Panel de Sistema de Control
           </h1>
           <ConnectionStatus isConnected={connected} />
         </div>

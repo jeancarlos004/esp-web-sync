@@ -76,7 +76,7 @@ const Auth = () => {
       <Card className="w-full max-w-md p-8 space-y-6">
         <div className="text-center space-y-4">
           <img src={logoUL} alt="Universidad Libre" className="h-24 mx-auto object-contain" />
-          <h1 className="text-3xl font-bold text-foreground">Sistema IoT</h1>
+          <h1 className="text-3xl font-bold text-foreground">Sistema De Control</h1>
           <p className="text-muted-foreground">
             {isLogin ? "Inicia sesión en tu cuenta" : "Crea una nueva cuenta"}
           </p>

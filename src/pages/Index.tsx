@@ -71,7 +71,7 @@ const Index = () => {
             <img src={logoUL} alt="Universidad Libre" className="h-16 object-contain" />
             <div>
               <h1 className="text-4xl font-bold text-foreground">
-                Sistema IoT Completo
+                Sistema de Control 
               </h1>
               <p className="text-muted-foreground mt-1">
                 Bienvenido, <span className="text-primary font-semibold">{user.name}</span>
@@ -91,7 +91,7 @@ const Index = () => {
               <Power className="w-8 h-8 text-primary" />
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-foreground">Sistema de Control y Monitoreo IoT</h2>
+              <h2 className="text-2xl font-bold text-foreground">Sistema de Control</h2>
               <p className="text-muted-foreground">ESP32 + Sensor HC-SR05 + LEDs + Pulsadores + LCD + Teclado Matricial</p>
             </div>
           </div>
