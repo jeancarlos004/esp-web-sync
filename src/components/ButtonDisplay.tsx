@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Circle } from "lucide-react";
+import { API_CONFIG, getHeaders, handleApiResponse } from "@/config/api";
 
 interface ButtonState {
   button_number: number;
@@ -14,51 +14,26 @@ const ButtonDisplay = ({ deviceId }: { deviceId: string }) => {
 
   useEffect(() => {
     loadButtonStates();
-    subscribeToButtonChanges();
+    const interval = setInterval(loadButtonStates, 1000);
+    return () => clearInterval(interval);
   }, [deviceId]);
 
   const loadButtonStates = async () => {
-    const { data, error } = await supabase
-      .from("button_states")
-      .select("*")
-      .eq("device_id", deviceId)
-      .order("timestamp", { ascending: false })
-      .limit(3);
+    try {
+      const response = await fetch(
+        `${API_CONFIG.BASE_URL}/button/history?limit=3&device_id=${deviceId}`,
+        { headers: getHeaders(true) }
+      );
+      const data = await handleApiResponse(response);
 
-    if (error) {
-      console.error("Error loading button states:", error);
-      return;
-    }
-
-    if (data) {
       const latest = [1, 2, 3].map((num) => {
-        const button = data.find((b) => b.button_number === num);
+        const button = data.find((b: ButtonState) => b.button_number === num);
         return button || { button_number: num, state: false, timestamp: "" };
       });
       setButtons(latest);
+    } catch (error) {
+      console.error("Error loading button states:", error);
     }
-  };
-
-  const subscribeToButtonChanges = () => {
-    const channel = supabase
-      .channel("button-changes")
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "button_states",
-          filter: `device_id=eq.${deviceId}`,
-        },
-        () => {
-          loadButtonStates();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
   };
 
   return (

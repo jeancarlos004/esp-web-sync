@@ -1,19 +1,27 @@
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Clock } from "lucide-react";
+import { sensorService, SensorReading } from "@/services/sensorService";
 
-interface Reading {
-  id: string;
-  distance: number;
-  timestamp: string;
-  device_id: string;
-}
+const SensorHistory = () => {
+  const [readings, setReadings] = useState<SensorReading[]>([]);
 
-interface SensorHistoryProps {
-  readings: Reading[];
-}
+  useEffect(() => {
+    loadReadings();
+    const interval = setInterval(loadReadings, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
-const SensorHistory = ({ readings }: SensorHistoryProps) => {
+  const loadReadings = async () => {
+    try {
+      const data = await sensorService.getHistory(50);
+      setReadings(data);
+    } catch (error) {
+      console.error("Error loading history:", error);
+    }
+  };
+
   return (
     <Card className="p-6 bg-gradient-to-br from-card to-card/80 border-border/50 shadow-lg">
       <div className="flex items-center gap-3 mb-4">

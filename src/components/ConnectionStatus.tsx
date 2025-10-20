@@ -3,10 +3,10 @@ import { Wifi, WifiOff } from "lucide-react";
 
 interface ConnectionStatusProps {
   isConnected: boolean;
-  deviceId: string;
+  deviceId?: string;
 }
 
-const ConnectionStatus = ({ isConnected, deviceId }: ConnectionStatusProps) => {
+const ConnectionStatus = ({ isConnected, deviceId = "ESP32-001" }: ConnectionStatusProps) => {
   return (
     <Card className="p-4 bg-gradient-to-br from-card to-card/80 border-border/50">
       <div className="flex items-center gap-3">

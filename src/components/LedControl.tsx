@@ -1,15 +1,10 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Lightbulb, LightbulbOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { ledService, LedState } from "@/services/ledService";
 
-interface LedState {
-  id: string;
-  led_number: number;
-  state: boolean;
-}
 
 const LedControl = ({ deviceId }: { deviceId: string }) => {
   const [leds, setLeds] = useState<LedState[]>([]);
@@ -17,72 +12,36 @@ const LedControl = ({ deviceId }: { deviceId: string }) => {
 
   useEffect(() => {
     loadLedStates();
-    subscribeToLedChanges();
+    const interval = setInterval(loadLedStates, 1000);
+    return () => clearInterval(interval);
   }, [deviceId]);
 
   const loadLedStates = async () => {
-    const { data, error } = await supabase
-      .from("led_states")
-      .select("*")
-      .eq("device_id", deviceId)
-      .order("led_number", { ascending: true });
-
-    if (error) {
-      console.error("Error loading LED states:", error);
-      return;
-    }
-
-    if (data) {
+    try {
+      const data = await ledService.getStates();
       setLeds(data);
+    } catch (error) {
+      console.error("Error loading LED states:", error);
     }
-  };
-
-  const subscribeToLedChanges = () => {
-    const channel = supabase
-      .channel("led-changes")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "led_states",
-          filter: `device_id=eq.${deviceId}`,
-        },
-        () => {
-          loadLedStates();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
   };
 
   const toggleLed = async (ledNumber: number, currentState: boolean) => {
     const newState = !currentState;
 
-    const { error } = await supabase.functions.invoke("sensor-api/update-led", {
-      body: {
-        led_number: ledNumber,
-        state: newState,
-        device_id: deviceId,
-      },
-    });
-
-    if (error) {
+    try {
+      await ledService.updateLed(ledNumber, newState);
+      toast({
+        title: `LED ${ledNumber}`,
+        description: `${newState ? "Encendido" : "Apagado"}`,
+      });
+      loadLedStates();
+    } catch (error) {
       toast({
         title: "Error",
         description: "No se pudo actualizar el LED",
         variant: "destructive",
       });
-      return;
     }
-
-    toast({
-      title: `LED ${ledNumber}`,
-      description: `${newState ? "Encendido" : "Apagado"}`,
-    });
   };
 
   return (

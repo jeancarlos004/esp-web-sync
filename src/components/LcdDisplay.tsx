@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Monitor } from "lucide-react";
+import { API_CONFIG, getHeaders, handleApiResponse } from "@/config/api";
 
 interface LcdMessage {
   message: string;
@@ -17,53 +17,26 @@ const LcdDisplay = ({ deviceId }: { deviceId: string }) => {
 
   useEffect(() => {
     loadLcdMessages();
-    subscribeToLcdChanges();
+    const interval = setInterval(loadLcdMessages, 2000);
+    return () => clearInterval(interval);
   }, [deviceId]);
 
   const loadLcdMessages = async () => {
-    const { data, error } = await supabase
-      .from("lcd_messages")
-      .select("*")
-      .eq("device_id", deviceId)
-      .order("timestamp", { ascending: false })
-      .limit(2);
+    try {
+      const response = await fetch(
+        `${API_CONFIG.BASE_URL}/lcd/current?device_id=${deviceId}`,
+        { headers: getHeaders(true) }
+      );
+      const data = await handleApiResponse(response);
 
-    if (error) {
+      if (data && data.length > 0) {
+        const line1 = data.find((m: LcdMessage) => m.line === 1)?.message || "";
+        const line2 = data.find((m: LcdMessage) => m.line === 2)?.message || "";
+        setMessages({ line1, line2 });
+      }
+    } catch (error) {
       console.error("Error loading LCD messages:", error);
-      return;
     }
-
-    if (data && data.length > 0) {
-      const line1 = data.find((m) => m.line === 1)?.message || "";
-      const line2 = data.find((m) => m.line === 2)?.message || "";
-      setMessages({ line1, line2 });
-    }
-  };
-
-  const subscribeToLcdChanges = () => {
-    const channel = supabase
-      .channel("lcd-changes")
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "lcd_messages",
-          filter: `device_id=eq.${deviceId}`,
-        },
-        (payload) => {
-          const newMessage = payload.new as LcdMessage;
-          setMessages((prev) => ({
-            ...prev,
-            [`line${newMessage.line}`]: newMessage.message,
-          }));
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
   };
 
   return (
