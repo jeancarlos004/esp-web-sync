@@ -5,12 +5,21 @@ import os
 from dotenv import load_dotenv
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app, resources={r"/api/*": {"origins": "*"}})
+
+# Configuración de CORS
+CORS(app, resources={
+    r"/api/*": {
+        "origins": ["http://localhost:5173", "http://127.0.0.1:5173"],
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"],
+        "supports_credentials": True
+    }
+})
 
 # JWT configuration
 app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY", "dev-secret-change-me")
@@ -149,6 +158,7 @@ def update_led():
     conn = get_conn()
     cur = conn.cursor()
     try:
+        # Actualizar el estado del LED
         cur.execute(
             """
             INSERT INTO led_states (device_id, led_number, state)
@@ -157,6 +167,18 @@ def update_led():
             """,
             (device_id, int(led_number), int(bool(state))),
         )
+        
+        # Actualizar el mensaje en la pantalla LCD
+        lcd_message = f"LED {led_number} {'ON' if state else 'OFF'}"
+        cur.execute(
+            """
+            INSERT INTO lcd_messages (device_id, line1, line2)
+            VALUES (%s, %s, %s)
+            ON DUPLICATE KEY UPDATE line1=VALUES(line1), updated_at=NOW()
+            """,
+            (device_id, lcd_message, f"Control: Pulsador {led_number}" if state else "")
+        )
+        
         conn.commit()
         return jsonify({
             "success": True,
@@ -164,6 +186,154 @@ def update_led():
             "led_number": led_number,
             "state": bool(state)
         }), 200
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"success": False, "message": str(e)}), 500
+    finally:
+        cur.close()
+        conn.close()
+
+# Endpoint para manejar los pulsadores
+@app.post("/api/button/press")
+def handle_button_press():
+    data = request.get_json(force=True) or {}
+    device_id = data.get("device_id", "ESP32-001")
+    button_number = data.get("button_number")
+    
+    if button_number is None:
+        return jsonify({"success": False, "message": "button_number es requerido"}), 400
+    
+    # Mapeo de botones a LEDs (si es necesario ajustar la correspondencia)
+    button_to_led = {
+        1: 1,  # Botón 1 controla LED 1
+        2: 2,  # Botón 2 controla LED 2
+        3: 3   # Botón 3 controla LED 3
+    }
+    
+    led_number = button_to_led.get(button_number, button_number)
+    
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        # Registrar el evento del botón
+        cur.execute(
+            """
+            INSERT INTO button_events (device_id, button_number, event_type)
+            VALUES (%s, %s, 'press')
+            """,
+            (device_id, int(button_number))
+        )
+        
+        # Obtener el estado actual del LED
+        cur.execute(
+            "SELECT state FROM led_states WHERE device_id = %s AND led_number = %s",
+            (device_id, led_number)
+        )
+        result = cur.fetchone()
+        
+        # Cambiar el estado del LED (toggle)
+        new_state = not bool(result[0]) if result else True
+        
+        # Actualizar el estado del LED
+        cur.execute(
+            """
+            INSERT INTO led_states (device_id, led_number, state)
+            VALUES (%s, %s, %s)
+            ON DUPLICATE KEY UPDATE state=VALUES(state)
+            """,
+            (device_id, led_number, int(new_state))
+        )
+        
+        # Actualizar la pantalla LCD
+        lcd_message = f"Pulsador {button_number} - LED {led_number} {'ON' if new_state else 'OFF'}"
+        cur.execute(
+            """
+            INSERT INTO lcd_messages (device_id, line1, line2)
+            VALUES (%s, %s, %s)
+            ON DUPLICATE KEY UPDATE line1=VALUES(line1), line2=VALUES(line2), updated_at=NOW()
+            """,
+            (device_id, lcd_message, f"Estado: {'Encendido' if new_state else 'Apagado'}")
+        )
+        
+        conn.commit()
+        return jsonify({
+            "success": True,
+            "message": "Pulsador procesado correctamente",
+            "button_number": button_number,
+            "led_number": led_number,
+            "led_state": new_state
+        }), 200
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"success": False, "message": str(e)}), 500
+    finally:
+        cur.close()
+        conn.close()
+
+# Endpoint para obtener el estado actual de los LEDs
+@app.get("/api/led/status")
+def get_led_status():
+    device_id = request.args.get("device_id", "ESP32-001")
+    conn = get_conn()
+    cur = conn.cursor(dictionary=True)
+    try:
+        cur.execute(
+            "SELECT led_number, state FROM led_states WHERE device_id = %s",
+            (device_id,)
+        )
+        leds = {str(led['led_number']): bool(led['state']) for led in cur.fetchall()}
+        return jsonify({"success": True, "leds": leds}), 200
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+    finally:
+        cur.close()
+        conn.close()
+
+# ===================== LCD ENDPOINTS =====================
+
+@app.get("/api/lcd/current")
+def get_lcd_messages():
+    device_id = request.args.get("device_id", "ESP32-001")
+    conn = get_conn()
+    cur = conn.cursor(dictionary=True)
+    try:
+        # Obtener mensajes del LCD
+        cur.execute(
+            """
+            SELECT * FROM lcd_messages 
+            WHERE device_id = %s 
+            ORDER BY updated_at DESC 
+            LIMIT 1
+            """,
+            (device_id,)
+        )
+        message = cur.fetchone()
+        
+        if message:
+            # Si hay mensaje, devolverlo en formato de líneas
+            return jsonify([{
+                "line": 1,
+                "message": message.get("line1", ""),
+                "timestamp": message.get("updated_at")
+            }, {
+                "line": 2,
+                "message": message.get("line2", ""),
+                "timestamp": message.get("updated_at")
+            }]), 200
+        else:
+            # Si no hay mensajes, devolver valores por defecto
+            return jsonify([{
+                "line": 1,
+                "message": "Bienvenido",
+                "timestamp": datetime.now().isoformat()
+            }, {
+                "line": 2,
+                "message": "Sistema listo",
+                "timestamp": datetime.now().isoformat()
+            }]), 200
+            
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
     finally:
         cur.close()
         conn.close()
