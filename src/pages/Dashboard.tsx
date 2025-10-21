@@ -78,7 +78,7 @@ const Dashboard = () => {
     <div className="min-h-screen bg-gradient-to-br from-background to-secondary/20 p-6">
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-4xl font-bold text-foreground">Dashboard IoT</h1>
+          <h1 className="text-4xl font-bold text-foreground">Dashboard </h1>
           <Activity className="w-8 h-8 text-primary" />
         </div>
 

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { BarChart3, Settings, FileText, Users, LogOut, Power } from "lucide-react";
 import { authService } from "@/services/authService";
@@ -120,28 +120,25 @@ const Index = () => {
           {menuItems.map((item, index) => {
             const Icon = item.icon;
             return (
-              <div
+              <Link
                 key={index}
-                className="animate-fade-in hover-scale cursor-pointer"
-                style={{ animationDelay: `${index * 0.1}s` }}
-                onClick={() => navigate(item.path)}
+                to={item.path}
+                className={`p-6 rounded-xl bg-gradient-to-br ${item.color} hover:shadow-lg transition-all cursor-pointer border border-border/50 block`}
               >
-                <div className={`bg-gradient-to-br ${item.color} p-6 rounded-2xl border border-border/30 h-full`}>
-                  <div className="flex items-start gap-4">
-                    <div className="p-3 bg-background/80 rounded-xl">
-                      <Icon className={`w-8 h-8 ${item.iconColor}`} />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="text-xl font-bold text-foreground mb-2">
-                        {item.title}
-                      </h3>
-                      <p className="text-muted-foreground text-sm">
-                        {item.description}
-                      </p>
-                    </div>
+                <div className="flex items-start gap-4">
+                  <div className="p-3 bg-background/80 rounded-xl">
+                    <Icon className={`w-8 h-8 ${item.iconColor}`} />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-xl font-bold text-foreground mb-2">
+                      {item.title}
+                    </h3>
+                    <p className="text-muted-foreground text-sm">
+                      {item.description}
+                    </p>
                   </div>
                 </div>
-              </div>
+              </Link>
             );
           })}
         </div>
